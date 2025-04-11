@@ -7,6 +7,12 @@ import { Button } from "@/components/ui/button"
 import { insertTicketSchemaType, selectTicketSchemaType, ticketInsertSchema, ticketSelectSchema } from "@/app/zod-schemas/ticket"
 import { selectCustomerSchemaType } from "@/app/zod-schemas/customer"
 
+import { useAction } from "next-safe-action/hooks"
+import { saveTicketAction } from "@/app/actions/saveTicketAction"
+import { toast } from "sonner"
+import { LoaderCircle } from "lucide-react"
+import { DisplayServerActionResponse } from "@/components/DisplayServerActionResponse"
+
 import InputWithLable from "@/components/inputs/InputWithLabel"
 import TextAreaWithLabel from "@/components/inputs/TextAreaWithLabel"
 import SelectWithLabel from "@/components/inputs/SelectWithLabel"
@@ -43,12 +49,32 @@ export default function TickertForm({customer, ticket, techs, isEditable = true}
 
     async function onSubmit(data: insertTicketSchemaType) {
         console.log("Ticket data", data);
+        executeSave(data);
     }
+
+    const { execute: executeSave,
+                result: saveResult,
+                isExecuting: isSaving,
+                reset: resetSaveAtion 
+            } = useAction(saveTicketAction, { 
+                onSuccess({ data }) {
+                    toast("Success!", {
+                        description: data?.message
+                    });
+                },
+                onError({ error }) {
+                    toast.error("Error", {
+                        description: "Save failed"
+                    });
+                }
+            
+            })
 
 
     return (
         <>
             <div className="flex flex-col gap-1 sm:px-8">
+                <DisplayServerActionResponse result={saveResult} />
                 <div className="text-2xl font-bold">
                     {ticket?.id && isEditable ? `Edit Ticket # ${ticket.id}` : ticket?.id ? `View ticket # ${ticket.id}` : "New Ticket Form"}
                 </div>
@@ -105,11 +131,22 @@ export default function TickertForm({customer, ticket, techs, isEditable = true}
                             
                             {isEditable ? (
                                 <div className="flex gap-2">
-                                <Button type="submit" className="w-3/4" variant="default" title="Save">
-                                    Save
+                                <Button type="submit" className="w-3/4" variant="default" title="Save" disabled={isSaving}>
+                                    {isSaving ? (
+                                        <>
+                                            <LoaderCircle className="animate-spin" /> Saving
+                                        </>
+                                    ) : "Save"}
                                 </Button>
 
-                                <Button type="button" variant="destructive" title="Reset" onClick={() => form.reset(defaultValues)}>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    title="Reset"
+                                    onClick={() => {
+                                        form.reset(defaultValues)
+                                        resetSaveAtion()
+                                    }}>
                                     Reset
                                 </Button>
                             </div> 

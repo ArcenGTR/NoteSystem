@@ -11,6 +11,12 @@ import SelectWithLabel from "@/components/inputs/SelectWithLabel"
 import CheckBoxWithLabel from "@/components/inputs/CheckBoxWithLable"
 import { StatesArray } from "@/app/constants/StatesArray"
 
+import { useAction } from "next-safe-action/hooks"
+import { saveCustomerAction } from "@/app/actions/saveCustomerAction"
+import { toast } from "sonner"
+import { LoaderCircle } from "lucide-react"
+import { DisplayServerActionResponse } from "@/components/DisplayServerActionResponse"
+
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs"
 import { is } from "drizzle-orm"
 
@@ -46,12 +52,32 @@ export default function CustomerForm({ customer }: Props) {
 
     async function onSubmit(data: insertCustomerSchemaType) {
         console.log("Customer data", data);
+        executeSave(data);
     }
+
+    const { execute: executeSave,
+            result: saveResult,
+            isExecuting: isSaving,
+            reset: resetSaveAtion 
+        } = useAction(saveCustomerAction, { 
+            onSuccess({ data }) {
+                toast("Success!", {
+                    description: data?.message
+                });
+            },
+            onError({ error }) {
+                toast.error("Error", {
+                    description: "Save failed"
+                });
+            }
+        
+        })
 
 
     return (
         <>
             <div className="flex flex-col gap-4 sm:px-8 pb-4">
+                <DisplayServerActionResponse result={saveResult} />
                 <div>
                     <h2 className="text-2xl font-bold">
                         {customer?.id ? "Edit" : "New"} Customer {customer?.id ? `# ${customer.id}` : "Form"}
@@ -81,11 +107,21 @@ export default function CustomerForm({ customer }: Props) {
                             {isManager ? <CheckBoxWithLabel<insertCustomerSchemaType> fieldTitle="Active" nameInSchema="active" message={""} /> : null}
 
                             <div className="flex gap-2">
-                                <Button type="submit" className="w-3/4" variant="default" title="Save">
-                                    Save
+                                <Button type="submit" className="w-3/4" variant="default" title="Save" disabled={isSaving}>
+                                    {isSaving ? (
+                                        <>
+                                            <LoaderCircle className="animate-spin" /> Saving
+                                        </>
+                                    ) : "Save"}
                                 </Button>
 
-                                <Button type="button" variant="destructive" title="Reset" onClick={() => form.reset(defaultValues)}>
+                                <Button type="button"
+                                        variant="destructive"
+                                        title="Reset"
+                                        onClick={() => {
+                                            form.reset(defaultValues)
+                                            resetSaveAtion()
+                                        } }>
                                     Reset
                                 </Button>
                             </div>
